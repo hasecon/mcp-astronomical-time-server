@@ -1,0 +1,71 @@
+{
+  "name": "mcp-astronomical-time-server",
+  "version": "2.0.0",
+  "description": "MCP server for time, astronomy, holidays, and productivity features",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "prettier": "^3.0.0"
+  },
+  "bin": {
+    "mcp-astronomical-time-server": "./dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "time",
+    "timezone",
+    "clock",
+    "astronomy",
+    "sun",
+    "moon",
+    "sunrise",
+    "sunset",
+    "golden-hour",
+    "blue-hour",
+    "moon-phase",
+    "holidays",
+    "international-holidays",
+    "dutch-holidays",
+    "workdays",
+    "circadian",
+    "biorhythm",
+    "jetlag",
+    "pomodoro",
+    "productivity",
+    "meeting-scheduler"
+  ],
+  "author": {
+    "name": "Hasecon",
+    "email": "support@hasecon.nl",
+    "url": "https://hasecon.nl"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hasecon/mcp-astronomical-time-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hasecon/mcp-astronomical-time-server/issues"
+  },
+  "homepage": "https://github.com/hasecon/mcp-astronomical-time-server#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
