@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  mcp-time-server:
+    build: .
+    container_name: mcp-astronomical-time-server
+    restart: unless-stopped
+    
+    # Environment variables
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CLIENT_ID=docker
+      
+    # Port mapping (only if running as HTTP service)
+    # ports:
+    #   - "3000:3000"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Health check passed')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits voor DDoS bescherming
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    # Security
+    security_opt:
+      - no-new-privileges:true
+    
+    # Read-only root filesystem voor extra security
+    read_only: true
+    
+    # Temporary filesystems voor logs etc.
+    tmpfs:
+      - /tmp:noexec,nosuid,size=50m
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Labels voor monitoring
+    labels:
+      - "com.docker.service.name=mcp-astronomical-time-server"
+      - "com.docker.service.version=2.0.0"
+
+  # Optioneel: Nginx reverse proxy voor extra beveiliging
+  nginx:
+    image: nginx:alpine
+    container_name: mcp-time-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - mcp-time-server
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 64M
+    profiles:
+      - "with-nginx"
+
+# Netwerk voor isolatie
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
