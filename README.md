@@ -84,7 +84,41 @@ Voeg dit toe aan je Claude Desktop configuratie:
   "mcpServers": {
     "astronomical-time": {
       "command": "docker",
-      "args": ["run", "-i", "ghcr.io/hasecon/mcp-astronomical-time-server:latest"]
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "ghcr.io/hasecon/mcp-astronomical-time-server:latest"
+      ]
+    }
+  }
+}
+```
+
+Of gecombineerd met andere MCP servers zoals GitHub:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ]
+    },
+    "astronomical-time": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "ghcr.io/hasecon/mcp-astronomical-time-server:latest"
+      ]
     }
   }
 }

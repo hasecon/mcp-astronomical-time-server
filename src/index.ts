@@ -7,6 +7,89 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
+// Type definitions for API responses
+interface Holiday {
+  date: string;
+  localName: string;
+  name: string;
+  countryCode: string;
+  fixed: boolean;
+  global: boolean;
+  counties: string[] | null;
+  launchYear: number | null;
+  types: string[];
+}
+
+interface Country {
+  countryCode: string;
+  name: string;
+}
+
+// Tool argument interfaces
+interface TimezoneConvertArgs {
+  datetime: string;
+  from_timezone: string;
+  to_timezone: string;
+}
+
+interface TimezoneDatetimeArgs {
+  target_datetime: string;
+  timezone: string;
+}
+
+interface AstronomicalArgs {
+  latitude: number;
+  longitude: number;
+  date?: string;
+  timezone?: string;
+  location_name?: string;
+}
+
+interface HolidayCountryArgs {
+  country: string;
+  year?: number;
+}
+
+interface HolidayCountriesArgs {
+  countries: string[];
+  year?: number;
+}
+
+interface CircadianArgs {
+  start_date: string;
+  end_date: string;
+}
+
+interface JetLagArgs {
+  origin_timezone: string;
+  destination_timezone: string;
+  travel_date: string;
+}
+
+interface PomodoroArgs {
+  start_time?: string;
+  sessions?: number;
+  timezone?: string;
+}
+
+interface MeetingArgs {
+  timezones: string[];
+  duration?: number;
+  date?: string;
+}
+
+interface DateRangeArgs {
+  start_date: string;
+  end_date: string;
+  include_time?: boolean;
+}
+
+interface CountdownArgs {
+  target_date: string;
+  event_name?: string;
+  timezone?: string;
+}
+
 // Rate limiting en DDoS bescherming
 class RateLimiter {
   private requests: Map<string, Array<number>> = new Map();
@@ -204,17 +287,7 @@ class DutchCalendar {
 
 // Internationale feestdagen via Nager.Date API (gratis, geen API key nodig)
 class InternationalHolidays {
-  static async fetchHolidays(countryCode: string, year: number): Promise<Array<{
-    date: string,
-    localName: string,
-    name: string,
-    countryCode: string,
-    fixed: boolean,
-    global: boolean,
-    counties: string[] | null,
-    launchYear: number | null,
-    types: string[]
-  }>> {
+  static async fetchHolidays(countryCode: string, year: number): Promise<Holiday[]> {
     try {
       // Nager.Date API - gratis en betrouwbaar
       const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`);
@@ -223,23 +296,20 @@ class InternationalHolidays {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return await response.json();
+      return await response.json() as Holiday[];
     } catch (error) {
       console.error('Error fetching holidays:', error);
       return [];
     }
   }
 
-  static async getCountries(): Promise<Array<{
-    countryCode: string,
-    name: string
-  }>> {
+  static async getCountries(): Promise<Country[]> {
     try {
       const response = await fetch('https://date.nager.at/api/v3/AvailableCountries');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      return await response.json() as Country[];
     } catch (error) {
       console.error('Error fetching countries:', error);
       return [];
@@ -518,11 +588,6 @@ const server = new Server(
   {
     name: "astronomical-time-server",
     version: "2.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
   }
 );
 
@@ -983,11 +1048,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             timeZone: timezone,
             dateStyle: "full",
             timeStyle: "medium"
-          });
+          } as Intl.DateTimeFormatOptions);
         } else {
           result = now.toLocaleString("sv-SE", { 
             timeZone: timezone 
-          }).replace(" ", "T") + "Z";
+          } as Intl.DateTimeFormatOptions).replace(" ", "T") + "Z";
         }
         
         return {
@@ -999,7 +1064,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "convert_timezone": {
-        const { datetime, from_timezone, to_timezone } = args;
+        const { datetime, from_timezone, to_timezone } = args as unknown as TimezoneConvertArgs;
         
         const inputDate = datetime === "now" ? new Date() : new Date(datetime);
         
@@ -1019,7 +1084,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "time_until": {
-        const { target_datetime, timezone = "UTC" } = args;
+        const { target_datetime, timezone = "UTC" } = args as unknown as TimezoneDatetimeArgs;
         
         const now = new Date();
         const target = new Date(target_datetime);
@@ -1047,10 +1112,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "world_clock": {
-        const cities = args?.cities || ["Europe/Amsterdam", "America/New_York", "Asia/Tokyo", "UTC"];
+        const cities = (args as any)?.cities || ["Europe/Amsterdam", "America/New_York", "Asia/Tokyo", "UTC"];
         const now = new Date();
         
-        const times = cities.map(city => {
+        const times = cities.map((city: string) => {
           const time = now.toLocaleString("nl-NL", { 
             timeZone: city,
             dateStyle: "short",
@@ -1068,7 +1133,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_sun_info": {
-        const { latitude, longitude, date = "today", timezone = "UTC" } = args;
+        const { latitude, longitude, date = "today", timezone = "UTC" } = args as unknown as AstronomicalArgs;
         const targetDate = date === "today" ? new Date() : new Date(date);
         
         const sunTimes = AstronomicalCalculator.getSunTimes(targetDate, latitude, longitude);
@@ -1099,7 +1164,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_moon_info": {
-        const { date = "today" } = args;
+        const { date = "today" } = args as { date?: string };
         const targetDate = date === "today" ? new Date() : new Date(date);
         
         const moonPhase = AstronomicalCalculator.getMoonPhase(targetDate);
@@ -1130,7 +1195,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_astronomical_info": {
-        const { latitude, longitude, location_name = "Onbekende Locatie", date = "today", timezone = "UTC" } = args;
+        const { latitude, longitude, location_name = "Onbekende Locatie", date = "today", timezone = "UTC" } = args as unknown as AstronomicalArgs;
         const targetDate = date === "today" ? new Date() : new Date(date);
         
         const sunTimes = AstronomicalCalculator.getSunTimes(targetDate, latitude, longitude);
@@ -1177,7 +1242,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_golden_hour": {
-        const { latitude, longitude, date = "today", timezone = "UTC" } = args;
+        const { latitude, longitude, date = "today", timezone = "UTC" } = args as unknown as AstronomicalArgs;
         const targetDate = date === "today" ? new Date() : new Date(date);
         
         const sunTimes = AstronomicalCalculator.getSunTimes(targetDate, latitude, longitude);
@@ -1221,7 +1286,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_dutch_holidays": {
-        const year = args?.year || new Date().getFullYear();
+        const year = (args as any)?.year || new Date().getFullYear();
         const holidays = DutchCalendar.getDutchHolidays(year);
         
         const result = `🇳🇱 Nederlandse Feestdagen ${year}
@@ -1245,7 +1310,7 @@ ${holidays.map(h => {
       }
 
       case "get_international_holidays": {
-        const { country, year = new Date().getFullYear() } = args;
+        const { country, year = new Date().getFullYear() } = args as unknown as HolidayCountryArgs;
         const countryCode = InternationalHolidays.getCountryCodeByName(country);
         
         try {
@@ -1295,7 +1360,7 @@ ${holidays.map(h => {
           return {
             content: [{ 
               type: "text", 
-              text: `❌ Error bij ophalen feestdagen voor ${country}: ${error.message}\n\n💡 Probeer een andere landnaam of ISO code.\n\n⚡ Remaining requests: ${rateCheck.remaining}` 
+              text: `❌ Error bij ophalen feestdagen voor ${country}: ${(error as Error).message}\n\n💡 Probeer een andere landnaam of ISO code.\n\n⚡ Remaining requests: ${rateCheck.remaining}` 
             }],
             isError: true
           };
@@ -1336,7 +1401,7 @@ ${holidays.map(h => {
           return {
             content: [{ 
               type: "text", 
-              text: `❌ Error bij ophalen landen: ${error.message}\n\n⚡ Remaining requests: ${rateCheck.remaining}` 
+              text: `❌ Error bij ophalen landen: ${(error as Error).message}\n\n⚡ Remaining requests: ${rateCheck.remaining}` 
             }],
             isError: true
           };
@@ -1344,7 +1409,7 @@ ${holidays.map(h => {
       }
 
       case "compare_holidays": {
-        const { countries, year = new Date().getFullYear() } = args;
+        const { countries, year = new Date().getFullYear() } = args as unknown as HolidayCountriesArgs;
         
         try {
           const allHolidays = await Promise.all(
@@ -1403,7 +1468,7 @@ ${holidays.map(h => {
           return {
             content: [{ 
               type: "text", 
-              text: `❌ Error bij vergelijken feestdagen: ${error.message}\n\n⚡ Remaining requests: ${rateCheck.remaining}` 
+              text: `❌ Error bij vergelijken feestdagen: ${(error as Error).message}\n\n⚡ Remaining requests: ${rateCheck.remaining}` 
             }],
             isError: true
           };
@@ -1411,7 +1476,7 @@ ${holidays.map(h => {
       }
 
       case "calculate_workdays": {
-        const { start_date, end_date } = args;
+        const { start_date, end_date } = args as unknown as CircadianArgs;
         const startDate = new Date(start_date);
         const endDate = new Date(end_date);
         
@@ -1439,7 +1504,7 @@ ${holidays.map(h => {
       }
 
       case "get_circadian_schedule": {
-        const { latitude, longitude, date = "today", timezone = "UTC" } = args;
+        const { latitude, longitude, date = "today", timezone = "UTC" } = args as unknown as AstronomicalArgs;
         const targetDate = date === "today" ? new Date() : new Date(date);
         
         const sunTimes = AstronomicalCalculator.getSunTimes(targetDate, latitude, longitude);
@@ -1475,7 +1540,7 @@ ${holidays.map(h => {
       }
 
       case "calculate_jetlag": {
-        const { origin_timezone, destination_timezone, travel_date = "today" } = args;
+        const { origin_timezone, destination_timezone, travel_date = "today" } = args as unknown as JetLagArgs;
         const travelDate = travel_date === "today" ? new Date() : new Date(travel_date);
         
         // Bereken tijdverschil
@@ -1512,7 +1577,7 @@ ${recovery.tips.map(tip => `  • ${tip}`).join('\n')}
       }
 
       case "create_pomodoro_schedule": {
-        const { start_time = "now", sessions = 4, timezone = "UTC" } = args;
+        const { start_time = "now", sessions = 4, timezone = "UTC" } = args as unknown as PomodoroArgs;
         const startTime = start_time === "now" ? new Date() : new Date(start_time);
         
         const schedule = ProductivityTimer.getPomodoroSchedule(startTime, sessions);
@@ -1547,7 +1612,7 @@ ${schedule.map((item, index) =>
       }
 
       case "find_meeting_time": {
-        const { timezones, duration = 60, date = "today" } = args;
+        const { timezones, duration = 60, date = "today" } = args as unknown as MeetingArgs;
         const targetDate = date === "today" ? new Date() : new Date(date);
         
         const meetingSchedule = MeetingScheduler.findBestMeetingTime(timezones, duration);
@@ -1577,7 +1642,7 @@ ${suggestion.localTimes.map(lt => `   📍 ${lt.zone}: ${lt.time}`).join('\n')}`
       }
 
       case "calculate_days_between": {
-        const { start_date, end_date, include_time = false } = args;
+        const { start_date, end_date, include_time = false } = args as unknown as DateRangeArgs;
         const startDate = new Date(start_date);
         const endDate = new Date(end_date);
         
@@ -1632,7 +1697,7 @@ ${direction}
       }
 
       case "countdown_to_event": {
-        const { target_date, event_name = "Target Event", timezone = "UTC" } = args;
+        const { target_date, event_name = "Target Event", timezone = "UTC" } = args as unknown as CountdownArgs;
         const now = new Date();
         const targetDate = new Date(target_date);
         
@@ -1749,7 +1814,7 @@ ${monitorStats.mostUsedTools.map((tool, index) =>
     return {
       content: [{ 
         type: "text", 
-        text: `❌ Error in ${name}: ${error.message}\n\n⚡ Remaining requests: ${rateCheck.remaining}` 
+        text: `❌ Error in ${name}: ${(error as Error).message}\n\n⚡ Remaining requests: ${rateCheck.remaining}` 
       }],
       isError: true
     };

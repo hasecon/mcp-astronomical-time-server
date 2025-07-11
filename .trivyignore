@@ -1,0 +1,8 @@
+# Trivy ignore file
+# https://aquasecurity.github.io/trivy/latest/docs/vulnerability/examples/filter/
+
+# Known false positives or accepted risks
+# Format: CVE-YYYY-NNNN
+
+# Example (uncomment if needed):
+# CVE-2023-12345
